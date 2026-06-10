@@ -79,14 +79,33 @@ class BrandContentPlanTest extends TestCase
         $this->assertStringNotContainsString('base64', $brand->logo_path);
         Storage::disk('public')->assertExists($brand->logo_path);
         $oldKey = $brand->logo_path;
+        $this->assertStringContainsString('?v=', $brand->logoUrl());
 
         $this->actingAs($user)->put(route('brands.update', $brand), [
             'name' => $brand->name,
             'logo' => UploadedFile::fake()->image('new-logo.png', 200, 200),
         ])->assertRedirect();
 
+        $this->assertNotSame($oldKey, $brand->fresh()->logo_path);
         Storage::disk('public')->assertMissing($oldKey);
         Storage::disk('public')->assertExists($brand->fresh()->logo_path);
+    }
+
+    public function test_user_can_remove_an_existing_brand_logo(): void
+    {
+        $user = User::factory()->create();
+        $brand = Brand::factory()->for($user)->create([
+            'logo_path' => "brands/{$user->id}/logos/old-logo.png",
+        ]);
+        Storage::disk('public')->put($brand->logo_path, 'old-logo');
+
+        $this->actingAs($user)->put(route('brands.update', $brand), [
+            'name' => $brand->name,
+            'remove_logo' => true,
+        ])->assertRedirect();
+
+        $this->assertNull($brand->fresh()->logo_path);
+        Storage::disk('public')->assertMissing("brands/{$user->id}/logos/old-logo.png");
     }
 
     public function test_content_crud_validation_filters_and_sorting_work(): void
@@ -141,6 +160,82 @@ class BrandContentPlanTest extends TestCase
         $key = $plan->images()->first()->file_path;
         $this->actingAs($user)->delete(route('contents.destroy', $plan))->assertRedirect();
         Storage::disk('public')->assertMissing($key);
+    }
+
+    public function test_content_media_update_can_keep_remove_and_add_images_together(): void
+    {
+        $user = User::factory()->create();
+        $brand = Brand::factory()->for($user)->create();
+        $plan = ContentPlan::factory()->for($brand)->create();
+        $kept = $plan->images()->create([
+            'file_path' => "brands/{$brand->id}/contents/{$plan->id}/keep.jpg",
+            'original_name' => 'keep.jpg',
+            'mime_type' => 'image/jpeg',
+            'file_size' => 100,
+            'sort_order' => 0,
+        ]);
+        $removed = $plan->images()->create([
+            'file_path' => "brands/{$brand->id}/contents/{$plan->id}/remove.jpg",
+            'original_name' => 'remove.jpg',
+            'mime_type' => 'image/jpeg',
+            'file_size' => 100,
+            'sort_order' => 1,
+        ]);
+        Storage::disk('public')->put($kept->file_path, 'keep');
+        Storage::disk('public')->put($removed->file_path, 'remove');
+
+        $this->actingAs($user)->put(route('contents.update', $plan), [
+            'posting_date' => '2026-06-20',
+            'posting_time' => '18:30',
+            'type' => 'carousel',
+            'platforms' => ['instagram' => true, 'tiktok' => false],
+            'headline' => 'Media diperbarui',
+            'retain_images' => [$kept->id],
+            'images' => [UploadedFile::fake()->image('new-image.png', 600, 600)],
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('content_images', ['id' => $kept->id, 'sort_order' => 0]);
+        $this->assertDatabaseMissing('content_images', ['id' => $removed->id]);
+        $this->assertDatabaseHas('content_images', [
+            'content_plan_id' => $plan->id,
+            'original_name' => 'new-image.png',
+            'sort_order' => 1,
+        ]);
+        Storage::disk('public')->assertExists($kept->file_path);
+        Storage::disk('public')->assertMissing($removed->file_path);
+        Storage::disk('public')->assertExists(
+            $plan->images()->where('original_name', 'new-image.png')->firstOrFail()->file_path,
+        );
+    }
+
+    public function test_content_media_update_rejects_more_than_twelve_total_images(): void
+    {
+        $user = User::factory()->create();
+        $brand = Brand::factory()->for($user)->create();
+        $plan = ContentPlan::factory()->for($brand)->create();
+
+        $retainedIds = collect(range(1, 10))->map(function (int $index) use ($plan): int {
+            return $plan->images()->create([
+                'file_path' => "brands/{$plan->brand_id}/contents/{$plan->id}/{$index}.jpg",
+                'original_name' => "{$index}.jpg",
+                'mime_type' => 'image/jpeg',
+                'file_size' => 100,
+                'sort_order' => $index - 1,
+            ])->id;
+        })->all();
+
+        $this->actingAs($user)->put(route('contents.update', $plan), [
+            'posting_date' => '2026-06-20',
+            'type' => 'carousel',
+            'platforms' => ['instagram' => true, 'tiktok' => false],
+            'headline' => 'Terlalu banyak media',
+            'retain_images' => $retainedIds,
+            'images' => [
+                UploadedFile::fake()->image('new-1.png'),
+                UploadedFile::fake()->image('new-2.png'),
+                UploadedFile::fake()->image('new-3.png'),
+            ],
+        ])->assertSessionHasErrors('images');
     }
 
     public function test_user_can_create_and_reuse_a_custom_content_type_for_one_brand(): void

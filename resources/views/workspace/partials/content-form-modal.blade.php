@@ -54,11 +54,30 @@
                         </div>
                     </div>
                 @endforeach
-                <div class="field">
-                    <label for="content-images">Gambar (maksimal 12)</label>
-                    <input id="content-images" name="images[]" type="file" accept=".jpg,.jpeg,.png,.webp" multiple data-multiple-preview>
-                    <div class="image-preview-grid" data-image-preview-list></div>
-                    <div class="existing-images" data-existing-images></div>
+                <div class="field media-field">
+                    <div class="media-field-heading">
+                        <div>
+                            <label for="content-images">Media konten</label>
+                            <p class="field-help">Maksimal 12 gambar. JPG, PNG, atau WebP, masing-masing maksimal 5 MB.</p>
+                        </div>
+                        <span class="media-count" data-media-count>0 / 12</span>
+                    </div>
+                    <label class="media-picker" for="content-images">
+                        <span class="icon"><svg><use href="#i-plus"/></svg></span>
+                        <span><strong>Pilih gambar baru</strong><small>Bisa memilih beberapa file sekaligus atau menambahnya bertahap.</small></span>
+                    </label>
+                    <input class="hidden-input" id="content-images" name="images[]" type="file" accept=".jpg,.jpeg,.png,.webp" multiple data-multiple-preview>
+                    <p class="media-edit-help" data-media-edit-help hidden>
+                        Gambar baru akan <strong>ditambahkan</strong>. Gambar tersimpan hanya dihapus jika Anda memilih tombol Hapus.
+                    </p>
+                    <section class="media-section" data-existing-media-section hidden>
+                        <div class="media-section-title"><strong>Media tersimpan</strong><span>Pilih Hapus untuk mengeluarkannya saat disimpan.</span></div>
+                        <div class="existing-images" data-existing-images></div>
+                    </section>
+                    <section class="media-section" data-new-media-section hidden>
+                        <div class="media-section-title"><strong>Media baru</strong><span>File berikut akan diunggah setelah Anda menekan Simpan.</span></div>
+                        <div class="image-preview-grid" data-image-preview-list></div>
+                    </section>
                 </div>
                 <div class="field"><label for="document-link">Link dokumen</label><input id="document-link" name="document_link" type="url" maxlength="2048" value="{{ old('document_link') }}" placeholder="https://..."></div>
             </div>

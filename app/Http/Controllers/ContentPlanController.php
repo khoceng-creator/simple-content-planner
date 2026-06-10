@@ -58,9 +58,19 @@ class ContentPlanController extends Controller
     {
         $contentPlan->load('images', 'brand');
         $uploadedKeys = [];
+        $uploadedMetadata = [];
+        $retainedIds = collect($request->input('retain_images', []))->map(fn ($id) => (int) $id);
+        $removedImages = $contentPlan->images->whereNotIn('id', $retainedIds);
 
         try {
-            DB::transaction(function () use ($request, $contentPlan, &$uploadedKeys): void {
+            $sortOrder = $retainedIds->count();
+            foreach ($request->file('images', []) as $file) {
+                $metadata = $this->media->storeContentImage($contentPlan, $file, $sortOrder++);
+                $uploadedKeys[] = $metadata['file_path'];
+                $uploadedMetadata[] = $metadata;
+            }
+
+            DB::transaction(function () use ($request, $contentPlan, $retainedIds, $removedImages, $uploadedMetadata): void {
                 $validated = $request->validated();
                 $contentType = ContentType::resolveFor(
                     $contentPlan->brand,
@@ -70,16 +80,15 @@ class ContentPlanController extends Controller
                 $validated['type'] = $contentType->slug;
                 $contentPlan->update($this->payload($validated));
 
-                $retainedIds = collect($request->input('retain_images', []))->map(fn ($id) => (int) $id);
-                foreach ($contentPlan->images->whereNotIn('id', $retainedIds) as $image) {
-                    $this->media->deleteContentImage($image);
+                foreach ($removedImages as $image) {
                     $image->delete();
                 }
 
-                $sortOrder = $retainedIds->count();
-                foreach ($request->file('images', []) as $file) {
-                    $metadata = $this->media->storeContentImage($contentPlan, $file, $sortOrder++);
-                    $uploadedKeys[] = $metadata['file_path'];
+                foreach ($contentPlan->images->whereIn('id', $retainedIds)->values() as $sortOrder => $image) {
+                    $image->update(['sort_order' => $sortOrder]);
+                }
+
+                foreach ($uploadedMetadata as $metadata) {
                     $contentPlan->images()->create($metadata);
                 }
             });
@@ -92,6 +101,10 @@ class ContentPlanController extends Controller
             return back()->withInput()->withErrors([
                 'images' => 'Upload media gagal sehingga perubahan konten dibatalkan. Silakan coba lagi.',
             ]);
+        }
+
+        foreach ($removedImages as $image) {
+            rescue(fn () => $this->media->deleteContentImage($image), report: true);
         }
 
         return redirect()->to($this->workspaceUrl($contentPlan->brand, $contentPlan))

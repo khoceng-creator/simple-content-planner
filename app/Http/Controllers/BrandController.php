@@ -60,24 +60,21 @@ class BrandController extends Controller
     {
         $newKey = null;
         $oldKey = $brand->logo_path;
+        $removeLogo = $request->boolean('remove_logo');
 
         try {
-            DB::transaction(function () use ($request, $brand, &$newKey): void {
-                $name = (string) $request->string('name')->trim();
-                if ($request->hasFile('logo')) {
-                    $newKey = $this->media->replaceBrandLogo($brand, $request->file('logo'));
-                }
+            if ($request->hasFile('logo')) {
+                $newKey = $this->media->replaceBrandLogo($brand, $request->file('logo'));
+            }
 
+            DB::transaction(function () use ($request, $brand, $newKey, $removeLogo): void {
+                $name = (string) $request->string('name')->trim();
                 $brand->update([
                     'name' => $name,
                     'slug' => Brand::uniqueSlugFor($request->user(), $name, $brand),
-                    'logo_path' => $newKey ?: $brand->logo_path,
+                    'logo_path' => $newKey ?: ($removeLogo ? null : $brand->logo_path),
                 ]);
             });
-
-            if ($newKey && $oldKey) {
-                $this->media->deleteBrandLogo($oldKey);
-            }
         } catch (Throwable $exception) {
             if ($newKey) {
                 rescue(fn () => $this->media->deleteObject($newKey), report: true);
@@ -85,6 +82,10 @@ class BrandController extends Controller
             report($exception);
 
             return back()->withInput()->withErrors(['logo' => 'Brand gagal diperbarui. Silakan coba lagi.']);
+        }
+
+        if ($oldKey && ($newKey || $removeLogo)) {
+            rescue(fn () => $this->media->deleteBrandLogo($oldKey), report: true);
         }
 
         return back()->with('success', 'Brand berhasil diperbarui.');

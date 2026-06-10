@@ -13,11 +13,18 @@
                 </button>
             </div>
             <div class="modal-body">
-                <label class="upload" for="brand-logo">
-                    <span class="upload-empty"><span class="icon"><svg><use href="#i-camera"/></svg></span>Logo</span>
-                    <img data-upload-preview alt="">
-                </label>
+                <div class="brand-logo-editor">
+                    <label class="upload" for="brand-logo">
+                        <span class="upload-empty"><span class="icon"><svg><use href="#i-camera"/></svg></span>Pilih logo</span>
+                        <img data-upload-preview alt="Preview logo brand">
+                    </label>
+                    <p class="field-help" data-brand-logo-help>JPG, PNG, atau WebP. Maksimal 2 MB.</p>
+                    <button class="btn danger brand-logo-remove" type="button" data-remove-brand-logo hidden>
+                        <span class="icon"><svg><use href="#i-trash"/></svg></span>Hapus logo
+                    </button>
+                </div>
                 <input class="hidden-input" id="brand-logo" name="logo" type="file" accept=".jpg,.jpeg,.png,.webp" data-preview-input>
+                <input name="remove_logo" type="hidden" value="0" data-remove-logo-input>
                 <div class="field">
                     <label for="brand-name">Nama brand</label>
                     <input id="brand-name" name="name" type="text" maxlength="120" value="{{ old('name') }}" required>
