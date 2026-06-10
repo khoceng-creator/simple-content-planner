@@ -56,7 +56,8 @@ class Brand extends Model
             return null;
         }
 
-        return app(MediaStorageService::class)->displayBrandLogoUrl($this);
+        return app(MediaStorageService::class)->displayBrandLogoUrl($this)
+            .'?v='.substr(sha1($this->logo_path), 0, 12);
     }
 
     public static function uniqueSlugFor(User $user, string $name, ?self $ignore = null): string

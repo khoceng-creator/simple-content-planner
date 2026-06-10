@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $contentPlan->headline }} · {{ $contentPlan->brand->name }}</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('icons/favicon-32x32.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('icons/apple-touch-icon.png') }}">
     <style>
         *{box-sizing:border-box}body{font:15px/1.55 Arial,sans-serif;color:#171717;margin:32px;max-width:960px}
         h1{font-size:28px;margin:0 0 4px}h2{font-size:15px;margin:24px 0 8px}.muted{color:#666}

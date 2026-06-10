@@ -45,6 +45,12 @@ class StoreContentPlanRequest extends FormRequest
             if ($type !== '__new' && $brand && ! $brand->contentTypes()->where('slug', $type)->exists()) {
                 $validator->errors()->add('type', 'Tipe konten tidak tersedia untuk brand ini.');
             }
+
+            $totalImages = count($this->input('retain_images', []))
+                + count($this->file('images', []));
+            if ($totalImages > 12) {
+                $validator->errors()->add('images', 'Total media lama dan baru maksimal 12 gambar.');
+            }
         });
     }
 
