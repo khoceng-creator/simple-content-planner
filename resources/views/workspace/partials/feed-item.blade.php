@@ -18,7 +18,12 @@
             </button>
         </form>
     </div>
-    <a class="feed-eye" href="{{ route('contents.preview', $plan) }}" aria-label="Preview {{ $plan->headline }}"><span><svg><use href="#i-eye"/></svg></span></a>
+    <a class="feed-eye" href="{{ route('contents.preview', $plan) }}" aria-label="Preview {{ $plan->headline }}">
+        <span class="feed-preview-button">
+            <svg aria-hidden="true"><use href="#i-eye"/></svg>
+            <span>Preview</span>
+        </span>
+    </a>
     <div class="feed-info">
         <div class="feed-title">{{ $plan->headline }}</div>
         <div class="feed-date">{{ $plan->posting_date->format('d/m') }}</div>

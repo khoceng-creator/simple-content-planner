@@ -7,13 +7,41 @@
                 <div>
                     <h2 class="modal-title" id="content-modal-title">Content Planner</h2>
                     <p class="modal-caption">Konten disimpan ke workspace {{ $brand->name }}.</p>
+                    <p class="modal-draft-note">Draft tetap tersimpan saat form ditutup selama halaman belum dimuat ulang.</p>
                 </div>
                 <button class="btn icon-only" type="button" data-close-modal aria-label="Tutup"><span class="icon"><svg><use href="#i-close"/></svg></span></button>
             </div>
             <div class="modal-body">
+                @php
+                    $postingTime = old('posting_time', '18:30');
+                    [$postingHour, $postingMinute] = str_contains($postingTime, ':')
+                        ? explode(':', $postingTime, 2)
+                        : ['', ''];
+                @endphp
                 <div class="field-row">
                     <div class="field"><label for="posting-date">Tanggal</label><input id="posting-date" name="posting_date" type="date" value="{{ old('posting_date', $selectedMonth->format('Y-m-d')) }}" required></div>
-                    <div class="field"><label for="posting-time">Jam posting</label><input id="posting-time" name="posting_time" type="time" value="{{ old('posting_time', '18:30') }}"></div>
+                    <div class="field">
+                        <label for="posting-hour">Jam posting <span class="field-label-hint">(24 jam)</span></label>
+                        <div class="time-picker" data-time-picker>
+                            <select id="posting-hour" data-time-hour aria-label="Jam posting">
+                                <option value="">Jam</option>
+                                @foreach (range(0, 23) as $hour)
+                                    @php($hourValue = sprintf('%02d', $hour))
+                                    <option value="{{ $hourValue }}" @selected($postingHour === $hourValue)>{{ $hourValue }}</option>
+                                @endforeach
+                            </select>
+                            <span class="time-separator" aria-hidden="true">:</span>
+                            <select data-time-minute aria-label="Menit posting">
+                                <option value="">Menit</option>
+                                @foreach (range(0, 59) as $minute)
+                                    @php($minuteValue = sprintf('%02d', $minute))
+                                    <option value="{{ $minuteValue }}" @selected(substr($postingMinute, 0, 2) === $minuteValue)>{{ $minuteValue }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <input id="posting-time" name="posting_time" type="hidden" value="{{ $postingTime }}" data-time-value>
+                        <p class="field-help">Contoh: pilih 15 : 00 untuk pukul 3 sore.</p>
+                    </div>
                 </div>
                 <div class="field">
                     <label for="content-type">Tipe konten</label>
@@ -82,7 +110,7 @@
                 <div class="field"><label for="document-link">Link dokumen</label><input id="document-link" name="document_link" type="url" maxlength="2048" value="{{ old('document_link') }}" placeholder="https://..."></div>
             </div>
             <div class="modal-foot">
-                <button class="btn" type="button" data-close-modal>Batal</button>
+                <button class="btn" type="button" data-close-modal>Tutup</button>
                 <button class="btn primary" type="submit">Simpan</button>
             </div>
         </form>

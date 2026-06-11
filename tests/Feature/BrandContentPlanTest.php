@@ -145,7 +145,7 @@ class BrandContentPlanTest extends TestCase
         $this->actingAs($user)->get(route('brands.workspace', ['brand' => $brand, 'year' => 2026, 'month' => 6]))
             ->assertOk()
             ->assertSeeInOrder(['Konten Pertama', 'Konten Kedua'])
-            ->assertDontSee('Bulan Lain');
+            ->assertDontSee('<div class="headline">Bulan Lain</div>', false);
 
         $this->actingAs($user)->get(route('brands.workspace', ['brand' => $brand, 'year' => 2026, 'month' => 6, 'type' => 'reels']))
             ->assertSee('Konten Kedua')
@@ -300,7 +300,34 @@ class BrandContentPlanTest extends TestCase
             ->assertSessionHasErrors('type');
     }
 
-    public function test_calendar_shows_tomorrow_reminder_for_the_closest_upcoming_content(): void
+    public function test_posting_time_uses_a_locale_independent_twenty_four_hour_picker(): void
+    {
+        $user = User::factory()->create();
+        $brand = Brand::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->get(route('brands.workspace', $brand))
+            ->assertOk()
+            ->assertSee('data-time-hour', false)
+            ->assertSee('data-time-minute', false)
+            ->assertSee('value="15"', false)
+            ->assertSee('name="posting_time" type="hidden" value="18:30"', false)
+            ->assertDontSee('name="posting_time" type="time"', false);
+    }
+
+    public function test_content_modal_explains_that_the_draft_is_preserved(): void
+    {
+        $user = User::factory()->create();
+        $brand = Brand::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->get(route('brands.workspace', $brand))
+            ->assertOk()
+            ->assertSee('Draft tetap tersimpan saat form ditutup selama halaman belum dimuat ulang.')
+            ->assertSee('data-close-modal', false);
+    }
+
+    public function test_calendar_shows_five_clickable_reminders_and_schedules_for_each_date(): void
     {
         CarbonImmutable::setTestNow(
             CarbonImmutable::create(2026, 6, 10, 10, 0, 0, 'Asia/Jakarta'),
@@ -314,17 +341,35 @@ class BrandContentPlanTest extends TestCase
             'headline' => 'Konten Besok',
         ]);
         ContentPlan::factory()->for($brand)->create([
+            'posting_date' => '2026-06-11',
+            'posting_time' => '20:00',
+            'headline' => 'Konten Besok Kedua',
+        ]);
+        ContentPlan::factory()->for($brand)->create([
             'posting_date' => '2026-06-14',
             'posting_time' => '09:00',
             'headline' => 'Konten Berikutnya',
         ]);
+        foreach ([15, 16, 17] as $day) {
+            ContentPlan::factory()->for($brand)->create([
+                'posting_date' => "2026-06-{$day}",
+                'posting_time' => '10:00',
+                'headline' => "Konten Tanggal {$day}",
+            ]);
+        }
 
-        $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->get(route('brands.workspace', ['brand' => $brand, 'year' => 2026, 'month' => 6]))
             ->assertOk()
             ->assertSee('Jadwal terdekat besok pukul 18.30.')
+            ->assertSee('Jadwal terdekat besok pukul 20.00.')
+            ->assertSee('Jadwal terdekat 4 hari lagi pukul 09.00.')
             ->assertDontSee('Besok ada konten Konten Besok.')
-            ->assertDontSee('Jadwal terdekat 4 hari lagi');
+            ->assertSee('aria-controls="calendar-schedule-11"', false)
+            ->assertSee('id="calendar-schedule-11"', false)
+            ->assertSee('Konten Besok Kedua');
+
+        $this->assertSame(5, substr_count($response->getContent(), 'class="calendar-reminder-item"'));
 
         CarbonImmutable::setTestNow();
     }

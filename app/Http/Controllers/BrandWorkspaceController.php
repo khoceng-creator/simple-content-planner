@@ -54,25 +54,34 @@ class BrandWorkspaceController extends Controller
         $contentTypeLabels = $contentTypes->pluck('name', 'slug');
 
         $selectedMonth = CarbonImmutable::create($year, $month, 1, 0, 0, 0, 'Asia/Jakarta');
-        $calendarDays = collect(range(1, $selectedMonth->daysInMonth))->map(fn (int $day) => [
-            'day' => $day,
-            'has_content' => $monthPlans->contains(fn ($plan) => $plan->posting_date->day === $day),
-            'is_today' => $now->year === $year && $now->month === $month && $now->day === $day,
-        ]);
+        $plansByDay = $monthPlans
+            ->sortBy([['posting_date', 'asc'], ['posting_time', 'asc']])
+            ->groupBy(fn (ContentPlan $plan) => $plan->posting_date->day);
+        $calendarDays = collect(range(1, $selectedMonth->daysInMonth))->map(function (int $day) use ($plansByDay, $now, $year, $month) {
+            return [
+                'day' => $day,
+                'plans' => $plansByDay->get($day, collect())->values(),
+                'is_today' => $now->year === $year && $now->month === $month && $now->day === $day,
+            ];
+        });
 
-        $upcoming = $brand->contentPlans()
+        $upcomingNotices = $brand->contentPlans()
             ->whereDate('posting_date', '>=', $now->toDateString())
             ->orderBy('posting_date')
             ->orderBy('posting_time')
-            ->first();
-        $upcomingNotice = $this->upcomingNotice($upcoming, $now);
+            ->limit(5)
+            ->get()
+            ->map(fn (ContentPlan $plan) => [
+                'plan' => $plan,
+                'message' => $this->upcomingNotice($plan, $now),
+            ]);
 
         return view('workspace.show', compact(
             'brand',
             'plans',
             'stats',
             'calendarDays',
-            'upcomingNotice',
+            'upcomingNotices',
             'selectedMonth',
             'year',
             'month',
@@ -83,12 +92,8 @@ class BrandWorkspaceController extends Controller
         ));
     }
 
-    private function upcomingNotice(?ContentPlan $plan, CarbonImmutable $today): string
+    private function upcomingNotice(ContentPlan $plan, CarbonImmutable $today): string
     {
-        if (! $plan) {
-            return 'Belum ada jadwal konten mendatang.';
-        }
-
         $today = $today->startOfDay();
         $postingDate = CarbonImmutable::instance($plan->posting_date)->setTimezone('Asia/Jakarta')->startOfDay();
         $time = $plan->posting_time
