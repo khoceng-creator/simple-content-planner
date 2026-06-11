@@ -35,6 +35,8 @@ Route::middleware(['auth', 'active.user'])->group(function (): void {
     Route::delete('/contents/{contentPlan}', [ContentPlanController::class, 'destroy'])->name('contents.destroy');
     Route::patch('/contents/{contentPlan}/toggle-made', ContentPlanStatusController::class)->name('contents.toggle-made');
     Route::get('/contents/{contentPlan}/preview', [ContentPlanPreviewController::class, 'show'])->name('contents.preview');
+    Route::get('/contents/{contentPlan}/pdf', [ContentPlanPreviewController::class, 'previewPdf'])->name('contents.pdf.preview');
+    Route::get('/contents/{contentPlan}/pdf/download', [ContentPlanPreviewController::class, 'downloadPdf'])->name('contents.pdf.download');
     Route::get('/contents/{contentPlan}/print', [ContentPlanPreviewController::class, 'print'])->name('contents.print');
 
     Route::get('/media/brands/{brand}/logo', [MediaController::class, 'brandLogo'])->name('media.brand-logo');

@@ -67,11 +67,19 @@ function openModal(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
     modal.classList.add('open');
+    modal.classList.remove('is-attention');
     modal.querySelector('input:not([type=hidden]), button, select')?.focus();
 }
 
 function closeModal(modal) {
     modal?.classList.remove('open');
+}
+
+function keepModalOpen(modal) {
+    if (!modal) return;
+    modal.classList.remove('is-attention');
+    window.requestAnimationFrame(() => modal.classList.add('is-attention'));
+    modal.querySelector('.modal')?.focus({ preventScroll: true });
 }
 
 function resetBrandForm() {
@@ -92,12 +100,14 @@ function resetBrandForm() {
     removeButton.innerHTML = '<span class="icon"><svg><use href="#i-trash"/></svg></span>Hapus logo';
     form.querySelector('[data-brand-logo-help]').textContent = 'JPG, PNG, atau WebP. Maksimal 2 MB.';
     form.dataset.originalLogoUrl = '';
+    form.dataset.draftContext = 'new-brand';
 }
 
 function fillBrandForm(payload) {
     const form = document.getElementById('brand-form');
     if (!form) return;
     form.action = payload.update_url;
+    form.dataset.draftContext = `brand-${payload.id}`;
     form.querySelector('[data-method-input]').value = 'PUT';
     form.querySelector('[name=name]').value = payload.name;
     document.getElementById('brand-modal-title').textContent = 'Edit brand';
@@ -119,6 +129,7 @@ function resetContentForm() {
     form.action = createUrl;
     form.querySelector('[data-method-input]').value = 'POST';
     form.querySelectorAll('[data-editor-for]').forEach((editor) => { editor.innerHTML = ''; });
+    setTimePickerValue(form, '18:30');
     form.querySelector('[data-content-type-select]').value = 'carousel';
     toggleNewContentType(form);
     form.querySelector('[name="platforms[instagram]"][type=checkbox]').checked = true;
@@ -128,17 +139,20 @@ function resetContentForm() {
     selectedContentFiles.set(form, []);
     renderSelectedContentFiles(form);
     updateMediaCount(form);
+    form.dataset.draftContext = 'new-content';
 }
 
 function fillContentForm(payload) {
     const form = document.getElementById('content-form');
     if (!form) return;
     form.action = payload.update_url;
+    form.dataset.draftContext = `content-${payload.id}`;
     form.querySelector('[data-method-input]').value = 'PUT';
-    ['posting_date', 'posting_time', 'type', 'headline', 'document_link'].forEach((name) => {
+    ['posting_date', 'type', 'headline', 'document_link'].forEach((name) => {
         const field = form.querySelector(`[name="${name}"]`);
         if (field) field.value = payload[name] || '';
     });
+    setTimePickerValue(form, payload.posting_time || '');
     toggleNewContentType(form);
     form.querySelector('[name="platforms[instagram]"][type=checkbox]').checked = Boolean(payload.platforms.instagram);
     form.querySelector('[name="platforms[tiktok]"][type=checkbox]').checked = Boolean(payload.platforms.tiktok);
@@ -157,6 +171,29 @@ function fillContentForm(payload) {
     form.querySelector('[data-existing-media-section]').hidden = !(payload.images || []).length;
     form.querySelector('[data-media-edit-help]').hidden = false;
     updateMediaCount(form);
+}
+
+function setTimePickerValue(form, value) {
+    const timePicker = form?.querySelector('[data-time-picker]');
+    const hiddenInput = form?.querySelector('[data-time-value]');
+    if (!timePicker || !hiddenInput) return;
+
+    const [hour = '', minute = ''] = String(value).split(':');
+    timePicker.querySelector('[data-time-hour]').value = hour;
+    timePicker.querySelector('[data-time-minute]').value = minute.slice(0, 2);
+    hiddenInput.value = hour && minute ? `${hour}:${minute.slice(0, 2)}` : '';
+}
+
+function syncTimePicker(form) {
+    const timePicker = form?.querySelector('[data-time-picker]');
+    const hiddenInput = form?.querySelector('[data-time-value]');
+    if (!timePicker || !hiddenInput) return;
+
+    const hour = timePicker.querySelector('[data-time-hour]').value;
+    const minuteSelect = timePicker.querySelector('[data-time-minute]');
+    if (hour && !minuteSelect.value) minuteSelect.value = '00';
+    const minute = minuteSelect.value;
+    hiddenInput.value = hour && minute ? `${hour}:${minute}` : '';
 }
 
 function fileIdentity(file) {
@@ -220,9 +257,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-toast]').forEach(setupToast);
     const brandForm = document.getElementById('brand-form');
     const contentForm = document.getElementById('content-form');
-    if (brandForm) brandForm.dataset.createUrl = brandForm.action;
-    if (contentForm) contentForm.dataset.createUrl = contentForm.action;
+    if (brandForm) {
+        brandForm.dataset.createUrl = brandForm.action;
+        brandForm.dataset.draftContext = 'new-brand';
+    }
+    if (contentForm) {
+        contentForm.dataset.createUrl = contentForm.action;
+        contentForm.dataset.draftContext = 'new-content';
+    }
     if (contentForm) toggleNewContentType(contentForm);
+    if (contentForm) syncTimePicker(contentForm);
 });
 
 document.addEventListener('click', async (event) => {
@@ -232,17 +276,52 @@ document.addEventListener('click', async (event) => {
     const themeButton = event.target.closest('[data-theme]');
     if (themeButton) applyTheme(themeButton.dataset.theme);
 
+    const calendarDay = event.target.closest('[data-calendar-day]');
+    if (calendarDay) {
+        const calendar = calendarDay.closest('.calendar-board');
+        const target = document.getElementById(calendarDay.dataset.calendarTarget);
+        const willOpen = target?.hidden ?? false;
+
+        calendar.querySelectorAll('[data-calendar-day]').forEach((button) => {
+            button.classList.remove('is-selected');
+            button.setAttribute('aria-expanded', 'false');
+        });
+        calendar.querySelectorAll('[data-calendar-panel]').forEach((panel) => {
+            panel.hidden = true;
+        });
+
+        if (target && willOpen) {
+            target.hidden = false;
+            calendarDay.classList.add('is-selected');
+            calendarDay.setAttribute('aria-expanded', 'true');
+        }
+    }
+
     const opener = event.target.closest('[data-open-modal]');
     if (opener) {
-        if (opener.hasAttribute('data-new-brand')) resetBrandForm();
-        if (opener.dataset.brand) {
-            resetBrandForm();
-            fillBrandForm(JSON.parse(opener.dataset.brand));
+        if (opener.hasAttribute('data-new-brand')) {
+            const form = document.getElementById('brand-form');
+            if (form?.dataset.draftContext !== 'new-brand') resetBrandForm();
         }
-        if (opener.hasAttribute('data-new-content')) resetContentForm();
+        if (opener.dataset.brand) {
+            const payload = JSON.parse(opener.dataset.brand);
+            const form = document.getElementById('brand-form');
+            if (form?.dataset.draftContext !== `brand-${payload.id}`) {
+                resetBrandForm();
+                fillBrandForm(payload);
+            }
+        }
+        if (opener.hasAttribute('data-new-content')) {
+            const form = document.getElementById('content-form');
+            if (form?.dataset.draftContext !== 'new-content') resetContentForm();
+        }
         if (opener.dataset.content) {
-            resetContentForm();
-            fillContentForm(JSON.parse(opener.dataset.content));
+            const payload = JSON.parse(opener.dataset.content);
+            const form = document.getElementById('content-form');
+            if (form?.dataset.draftContext !== `content-${payload.id}`) {
+                resetContentForm();
+                fillContentForm(payload);
+            }
         }
         openModal(opener.dataset.openModal);
     }
@@ -299,7 +378,7 @@ document.addEventListener('click', async (event) => {
 
     const closer = event.target.closest('[data-close-modal]');
     if (closer) closeModal(closer.closest('[data-modal]'));
-    if (event.target.matches('[data-modal]')) closeModal(event.target);
+    if (event.target.matches('[data-modal]')) keepModalOpen(event.target);
 
     const editorTool = event.target.closest('[data-editor-command]');
     if (editorTool) {
@@ -335,6 +414,10 @@ document.addEventListener('click', async (event) => {
 });
 
 document.addEventListener('change', (event) => {
+    if (event.target.matches('[data-time-hour], [data-time-minute]')) {
+        syncTimePicker(event.target.closest('form'));
+    }
+
     if (event.target.matches('[data-content-type-select]')) {
         toggleNewContentType(event.target.closest('form'));
     }
@@ -371,6 +454,7 @@ document.addEventListener('submit', (event) => {
         event.preventDefault();
         return;
     }
+    syncTimePicker(form);
     form.querySelectorAll('[data-editor-for]').forEach((editor) => {
         form.querySelector(`[name="${editor.dataset.editorFor}"]`).value = editor.innerHTML.trim();
     });

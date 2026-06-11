@@ -7,6 +7,7 @@
                 <div>
                     <h2 class="modal-title" id="brand-modal-title">Tambah brand</h2>
                     <p class="modal-caption">Nama dan logo untuk workspace konten.</p>
+                    <p class="modal-draft-note">Draft tetap tersimpan saat form ditutup selama halaman belum dimuat ulang.</p>
                 </div>
                 <button class="btn icon-only" type="button" data-close-modal aria-label="Tutup">
                     <span class="icon"><svg><use href="#i-close"/></svg></span>
@@ -31,7 +32,7 @@
                 </div>
             </div>
             <div class="modal-foot">
-                <button class="btn" type="button" data-close-modal>Batal</button>
+                <button class="btn" type="button" data-close-modal>Tutup</button>
                 <button class="btn primary" type="submit">Simpan</button>
             </div>
         </form>

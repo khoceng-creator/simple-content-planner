@@ -14,7 +14,9 @@
     <x-icons />
     <main class="login-wrap">
         <section class="login-card">
-            <img class="login-logo" src="{{ asset('images/imm-logo.png') }}" alt="IMM">
+            <div class="login-logo-frame">
+                <img class="login-logo" src="{{ asset('images/imm-logo.png') }}" alt="IMM Global Creative Media Solution">
+            </div>
             @yield('content')
         </section>
     </main>

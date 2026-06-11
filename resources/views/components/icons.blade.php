@@ -17,4 +17,6 @@
     <symbol id="i-carousel" viewBox="0 0 24 24"><rect x="5" y="7" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 4h10a2 2 0 0 1 2 2v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-single-post" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m7.5 16 3.2-3.6 2.5 2.7 1.8-2 2.5 3.9z" fill="currentColor"/></symbol>
     <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V4h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-file-pdf" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v5h4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8.3 16.5v-5h1.5a1.5 1.5 0 0 1 0 3H8.3M12.4 16.5v-5h1.2a2 2 0 0 1 0 4h-1.2M17 11.5h-2v5M15 14h1.7" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
