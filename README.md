@@ -1,6 +1,6 @@
 # IMM Content Planner
 
-IMM Content Planner adalah aplikasi internal berbasis Laravel untuk mengelola workspace brand dan jadwal konten media sosial bulanan. Aplikasi menyediakan kalender, timeline, feed, pengingat jadwal terdekat, penyimpanan media, tipe konten dinamis, serta preview yang dapat dicetak menjadi PDF.
+IMM Content Planner adalah aplikasi internal berbasis Laravel untuk mengelola workspace brand dan jadwal konten media sosial bulanan. Aplikasi menyediakan kalender interaktif, timeline, feed, pengingat jadwal terdekat, penyimpanan media privat, tipe konten dinamis, serta preview dan download PDF.
 
 ## Tampilan Aplikasi
 
@@ -17,19 +17,25 @@ IMM Content Planner adalah aplikasi internal berbasis Laravel untuk mengelola wo
 - Autentikasi berbasis session dengan reset password.
 - Pemisahan data berdasarkan pemilik brand.
 - CRUD brand beserta logo.
-- Kalender bulanan dengan penanda tanggal yang memiliki konten.
-- Pengingat jadwal konten terdekat.
+- Grid workspace brand responsif hingga empat kolom pada desktop.
+- Kalender bulanan interaktif dengan daftar jadwal pada tanggal yang dipilih.
+- Lima pengingat jadwal konten terdekat yang dapat diklik.
+- Sidebar workspace sticky dan dapat di-scroll pada layar desktop.
 - Tampilan konten dalam mode **Timeline** dan **Feed**.
 - Filter berdasarkan tipe konten.
 - Tipe konten bawaan dan tipe kustom per brand.
 - Platform Instagram dan TikTok per jadwal.
+- Input jam konsisten dalam format 24 jam pada Windows dan macOS.
 - Rich text sederhana untuk detail, script, dan catatan.
 - Maksimal 12 gambar per konten, masing-masing maksimal 5 MB.
+- Media yang sudah ada dapat dipertahankan, dihapus, atau ditambah saat mengedit konten.
 - Penyimpanan media lokal atau Cloudflare R2.
 - Status konten sudah atau belum dibuat.
-- Preview konten, share ringkasan, dan print ke PDF.
+- Draft form tetap tersimpan saat modal tertutup selama halaman belum dimuat ulang.
+- Preview konten, preview PDF inline, dan download PDF langsung.
 - Tema gelap dan terang.
 - Toast notification yang dapat ditutup dan hilang otomatis.
+- Favicon dan identitas visual IMM.
 
 ## Teknologi
 
@@ -40,6 +46,7 @@ IMM Content Planner adalah aplikasi internal berbasis Laravel untuk mengelola wo
 | Build tool | Vite 8 |
 | Database | SQLite atau MySQL |
 | Object storage | Local filesystem atau Cloudflare R2 |
+| PDF | Dompdf 3 |
 | Test | PHPUnit 12 |
 | Code style | Laravel Pint |
 
@@ -219,12 +226,19 @@ Setiap brand memiliki jadwal, tipe konten, dan media yang terpisah.
 
 1. Buka workspace brand.
 2. Tekan **Tambah**.
-3. Pilih tanggal, jam, tipe konten, dan platform.
+3. Pilih tanggal, jam dalam format 24 jam, tipe konten, dan platform.
 4. Isi headline, detail atau script, dan catatan.
 5. Tambahkan gambar atau link dokumen bila diperlukan.
 6. Simpan konten.
 
-Konten dapat diedit, dihapus, ditandai sudah dibuat, dipreview, dan dicetak ke PDF.
+Konten dapat diedit, dihapus, ditandai sudah dibuat, dipreview, serta diekspor ke PDF. Saat modal tertutup karena klik di luar form atau tombol tutup, draft tetap tersedia selama halaman belum dimuat ulang.
+
+Saat mengedit media:
+
+- Gambar lama secara default dipertahankan.
+- Gambar tertentu dapat ditandai untuk dihapus.
+- Upload baru ditambahkan sebagai media tambahan.
+- Total gambar lama yang dipertahankan dan upload baru tidak boleh melebihi 12 file.
 
 ### Menambahkan tipe konten kustom
 
@@ -243,13 +257,20 @@ Pilih **+ Tambah tipe baru** pada field tipe konten untuk membuat pilihan sepert
 
 Jadwal menyimpan slug tipe agar data lama dan URL filter tetap kompatibel.
 
-### Print atau simpan sebagai PDF
+### Preview dan download PDF
 
 1. Pilih **Preview** pada konten.
-2. Tekan **Print / PDF**.
-3. Pilih **Save as PDF** pada dialog print browser.
+2. Tekan **Preview PDF** untuk membuka dokumen PDF pada tab baru.
+3. Tekan **Download PDF** untuk mengunduh file secara langsung.
 
-PDF dibuat oleh browser sehingga aplikasi tidak membutuhkan service PDF tambahan.
+PDF dibuat server-side menggunakan Dompdf. Dokumen memuat identitas brand, jadwal, tipe konten, status, platform, detail atau script, catatan, media pendukung, dan link dokumen. Media privat dibaca dari storage dan ditanam ke PDF sehingga tidak membutuhkan URL bucket publik.
+
+### Kalender dan pengingat
+
+- Tanggal dengan jadwal ditandai titik pada kalender.
+- Klik tanggal tersebut untuk melihat seluruh jadwal pada hari yang dipilih.
+- Panel pengingat menampilkan maksimal lima jadwal terdekat.
+- Setiap jadwal pada kalender dan pengingat dapat diklik untuk membuka preview konten.
 
 ## Struktur Data
 
@@ -283,7 +304,7 @@ app/
 ├── Http/Requests/          Validasi request
 ├── Models/                 Model Eloquent
 ├── Policies/               Otorisasi berdasarkan kepemilikan
-└── Services/               Sanitasi rich text dan penyimpanan media
+└── Services/               Sanitasi rich text, penyimpanan media, dan renderer PDF
 
 database/
 ├── migrations/             Struktur database
@@ -292,11 +313,11 @@ database/
 
 resources/
 ├── css/app.css             Seluruh styling aplikasi
-├── js/app.js               Interaksi modal, editor, toast, dan preview
+├── js/app.js               Modal, draft form, editor, kalender, toast, dan preview
 └── views/                  Blade templates
 
 docs/screenshots/           Screenshot untuk dokumentasi
-tests/                      Feature dan unit tests
+tests/Feature/              Test autentikasi, CRUD, media, kalender, dan PDF
 ```
 
 ## Route Utama
@@ -311,7 +332,10 @@ tests/                      Feature dan unit tests
 | `POST` | `/brands/{brand}/contents` | Membuat jadwal |
 | `PUT/DELETE` | `/contents/{contentPlan}` | Edit atau hapus jadwal |
 | `GET` | `/contents/{contentPlan}/preview` | Preview konten |
-| `GET` | `/contents/{contentPlan}/print` | Tampilan print |
+| `GET` | `/contents/{contentPlan}/pdf` | Preview PDF inline |
+| `GET` | `/contents/{contentPlan}/pdf/download` | Download PDF |
+| `GET` | `/contents/{contentPlan}/print` | Alias lama menuju preview PDF |
+| `GET` | `/media/brands/{brand}/logo` | Logo brand private terotorisasi |
 | `GET` | `/media/{contentImage}` | Media private terotorisasi |
 
 Seluruh route workspace, konten, dan media membutuhkan pengguna aktif dan terautentikasi.
@@ -325,7 +349,9 @@ Seluruh route workspace, konten, dan media membutuhkan pengguna aktif dan teraut
 - Rich text disanitasi sebelum disimpan.
 - Upload dibatasi ke JPG, JPEG, PNG, dan WebP.
 - Setiap gambar dibatasi maksimal 5 MB.
+- Maksimal 12 gambar dapat disimpan pada setiap jadwal konten.
 - Nama objek media menggunakan UUID.
+- Respons PDF bersifat private dan tidak disimpan oleh shared cache.
 - Secret `.env` tidak boleh masuk version control.
 - Set `APP_DEBUG=false` pada production.
 
@@ -355,7 +381,13 @@ Verifikasi frontend production:
 npm run build
 ```
 
-Automated test menggunakan database terisolasi dan `Storage::fake()`. Test tidak menulis ke bucket R2 asli.
+Periksa advisory dependency:
+
+```bash
+composer audit
+```
+
+Automated test menggunakan database terisolasi dan `Storage::fake()`. Test tidak menulis ke bucket R2 asli. Cakupannya termasuk otorisasi, penggantian logo, pengelolaan media, tipe konten kustom, kalender interaktif, format waktu 24 jam, draft modal, serta preview dan download PDF.
 
 ## Perintah Berguna
 
@@ -368,6 +400,7 @@ php artisan config:clear
 php artisan cache:clear
 php artisan optimize:clear
 php artisan test
+composer audit
 npm run dev
 npm run build
 ```
@@ -395,9 +428,7 @@ php artisan optimize
 
 ## Memperbarui Screenshot README
 
-Repository menyediakan skrip berbasis Chrome DevTools untuk mengambil screenshot dari aplikasi lokal yang sudah memiliki data seed.
-
-Jalankan Chrome headless:
+Jalankan Chrome headless dengan DevTools:
 
 ```bash
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
@@ -408,7 +439,7 @@ Jalankan Chrome headless:
   about:blank
 ```
 
-Pada terminal lain:
+Pada terminal lain, jalankan:
 
 ```bash
 APP_SCREENSHOT_URL=https://simple-content-planner.test \
@@ -417,14 +448,14 @@ APP_SCREENSHOT_PASSWORD=password \
 node scripts/capture-doc-screenshots.mjs
 ```
 
-Hasilnya disimpan ke:
+Script menggunakan viewport 1600 px, mengaktifkan tema gelap, memilih workspace brand pertama, lalu memperbarui:
 
 ```text
 docs/screenshots/brand-workspaces.png
 docs/screenshots/content-planner-workspace.png
 ```
 
-Gunakan kredensial khusus dokumentasi bila mengambil screenshot dari environment selain lokal.
+Gunakan kredensial khusus dokumentasi bila mengambil screenshot dari environment selain lokal dan pastikan data sensitif tidak terlihat.
 
 ## Troubleshooting
 
@@ -454,6 +485,13 @@ php artisan storage:link
 - Pastikan `R2_ENDPOINT` adalah endpoint S3-compatible.
 - Jalankan `php artisan config:clear` setelah mengubah `.env`.
 - Periksa `storage/logs/laravel.log`.
+
+### PDF tidak dapat dibuat
+
+- Pastikan dependency terpasang dengan `composer install`.
+- Pastikan PHP memiliki ekstensi yang dibutuhkan Dompdf.
+- Periksa apakah object media masih tersedia pada disk yang dikonfigurasi.
+- Periksa `storage/logs/laravel.log` untuk media yang gagal ditanam ke PDF.
 
 ### Login seed tidak bekerja
 
