@@ -28,6 +28,7 @@ IMM Content Planner adalah aplikasi internal berbasis Laravel untuk mengelola wo
 - Input jam konsisten dalam format 24 jam pada Windows dan macOS.
 - Rich text sederhana untuk detail, script, dan catatan.
 - Maksimal 12 gambar per konten, masing-masing maksimal 5 MB.
+- Upload baru dioptimalkan ke WebP dan dibatasi dimensinya sebelum disimpan.
 - Media yang sudah ada dapat dipertahankan, dihapus, atau ditambah saat mengedit konten.
 - Penyimpanan media lokal atau Cloudflare R2.
 - Status konten sudah atau belum dibuat.
@@ -57,6 +58,7 @@ IMM Content Planner adalah aplikasi internal berbasis Laravel untuk mengelola wo
 - Node.js `20` atau lebih baru.
 - npm.
 - Ekstensi PHP yang diperlukan Laravel.
+- Ekstensi PHP GD dengan dukungan JPEG, PNG, dan WebP.
 - SQLite untuk setup lokal sederhana, atau MySQL.
 - Kredensial Cloudflare R2 jika media disimpan di R2.
 
@@ -168,11 +170,24 @@ Jangan gunakan kredensial fallback tersebut pada production. Registration sengaj
 
 Media tidak disimpan sebagai base64 atau binary di database. Database hanya menyimpan object key, nama file, MIME type, ukuran, dan urutan gambar.
 
+Upload baru diproses sebelum dikirim ke storage:
+
+- Logo dibatasi maksimal `512 × 512` piksel.
+- Gambar konten dibatasi maksimal sisi terpanjang `1920` piksel.
+- Hasil menggunakan WebP quality `82` jika ukurannya lebih efisien.
+- File kecil yang sudah lebih efisien tetap menggunakan format asal.
+
+Nilai tersebut dapat diubah melalui variabel `MEDIA_*` tanpa mengubah kode aplikasi.
+
 ### Private mode
 
 ```dotenv
 MEDIA_DISK=r2
 MEDIA_VISIBILITY=private
+MEDIA_LOGO_MAX_DIMENSION=512
+MEDIA_IMAGE_MAX_DIMENSION=1920
+MEDIA_WEBP_QUALITY=82
+MEDIA_BROWSER_CACHE_SECONDS=31536000
 
 R2_ACCESS_KEY_ID=your-access-key
 R2_SECRET_ACCESS_KEY=your-secret-key
@@ -189,6 +204,7 @@ Pada private mode:
 - File tidak membutuhkan public bucket.
 - Laravel memeriksa autentikasi dan kepemilikan sebelum men-stream media.
 - URL media menggunakan route aplikasi.
+- Browser menggunakan ETag dan cache immutable untuk mencegah transfer berulang.
 - `php artisan storage:link` tidak diperlukan.
 
 ### Public mode

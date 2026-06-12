@@ -16,6 +16,8 @@ use Throwable;
 
 class MediaStorageService
 {
+    public function __construct(private readonly ImageOptimizationService $imageOptimizer) {}
+
     public function disk(): Filesystem
     {
         return Storage::disk(config('filesystems.media_disk', 'r2'));
@@ -23,7 +25,11 @@ class MediaStorageService
 
     public function storeBrandLogo(User $user, UploadedFile $file): string
     {
-        return $this->storeUploadedFile("brands/{$user->id}/logos", $file);
+        return $this->storeUploadedImage(
+            "brands/{$user->id}/logos",
+            $file,
+            (int) config('media.logo_max_dimension', 512),
+        )['key'];
     }
 
     public function replaceBrandLogo(Brand $brand, UploadedFile $file): string
@@ -38,16 +44,17 @@ class MediaStorageService
 
     public function storeContentImage(ContentPlan $contentPlan, UploadedFile $file, int $sortOrder = 0): array
     {
-        $key = $this->storeUploadedFile(
+        $storedImage = $this->storeUploadedImage(
             "brands/{$contentPlan->brand_id}/contents/{$contentPlan->id}",
             $file,
+            (int) config('media.image_max_dimension', 1920),
         );
 
         return [
-            'file_path' => $key,
+            'file_path' => $storedImage['key'],
             'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType() ?: $file->getClientMimeType(),
-            'file_size' => $file->getSize(),
+            'mime_type' => $storedImage['mime_type'],
+            'file_size' => $storedImage['file_size'],
             'sort_order' => $sortOrder,
         ];
     }
@@ -75,11 +82,6 @@ class MediaStorageService
 
             throw new RuntimeException('Media gagal dihapus dari penyimpanan.', previous: $exception);
         }
-    }
-
-    public function objectExists(string $objectKey): bool
-    {
-        return $this->disk()->exists($objectKey);
     }
 
     /** @return resource|null */
@@ -114,14 +116,37 @@ class MediaStorageService
             ?? route('media.brand-logo', $brand);
     }
 
-    private function storeUploadedFile(string $directory, UploadedFile $file): string
+    public function mimeTypeFromPath(string $objectKey): string
     {
-        $extension = strtolower($file->guessExtension() ?: $file->getClientOriginalExtension() ?: 'bin');
-        $key = trim($directory, '/').'/'.Str::uuid().'.'.$extension;
+        return match (strtolower(pathinfo($objectKey, PATHINFO_EXTENSION))) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            default => 'application/octet-stream',
+        };
+    }
+
+    /**
+     * @return array{key: string, mime_type: string, file_size: int}
+     */
+    private function storeUploadedImage(string $directory, UploadedFile $file, int $maxDimension): array
+    {
+        $optimized = $this->imageOptimizer->optimize($file, $maxDimension);
+        $key = trim($directory, '/').'/'.Str::uuid().'.'.$optimized['extension'];
 
         try {
-            $stream = fopen($file->getRealPath(), 'rb');
-            if ($stream === false || ! $this->disk()->writeStream($key, $stream)) {
+            $stream = fopen('php://temp', 'w+b');
+            if ($stream === false) {
+                throw new RuntimeException('Stream media tidak dapat dibuat.');
+            }
+
+            fwrite($stream, $optimized['contents']);
+            rewind($stream);
+
+            if (! $this->disk()->writeStream($key, $stream, [
+                'ContentType' => $optimized['mime_type'],
+                'CacheControl' => 'public, max-age='.(int) config('media.browser_cache_seconds', 31536000).', immutable',
+            ])) {
                 throw new RuntimeException('Objek media tidak dapat ditulis.');
             }
 
@@ -129,7 +154,11 @@ class MediaStorageService
                 fclose($stream);
             }
 
-            return $key;
+            return [
+                'key' => $key,
+                'mime_type' => $optimized['mime_type'],
+                'file_size' => $optimized['file_size'],
+            ];
         } catch (Throwable $exception) {
             if (isset($stream) && is_resource($stream)) {
                 fclose($stream);

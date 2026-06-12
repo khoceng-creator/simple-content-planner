@@ -29,7 +29,7 @@ class StoreContentPlanRequest extends FormRequest
             'note_html' => ['nullable', 'string'],
             'document_link' => ['nullable', 'url', 'max:2048'],
             'images' => ['nullable', 'array', 'max:12'],
-            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:max_width=6000,max_height=6000'],
         ];
     }
 
@@ -67,6 +67,7 @@ class StoreContentPlanRequest extends FormRequest
             'images.*.image' => 'Setiap lampiran harus berupa gambar.',
             'images.*.mimes' => 'Gambar harus berformat JPG, PNG, atau WebP.',
             'images.*.max' => 'Ukuran setiap gambar maksimal 5 MB.',
+            'images.*.dimensions' => 'Dimensi setiap gambar maksimal 6000 × 6000 piksel.',
         ];
     }
 

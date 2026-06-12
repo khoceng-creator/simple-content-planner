@@ -76,8 +76,12 @@ class BrandContentPlanTest extends TestCase
 
         $brand = Brand::query()->firstOrFail();
         $this->assertStringStartsWith("brands/{$user->id}/logos/", $brand->logo_path);
+        $this->assertStringEndsWith('.webp', $brand->logo_path);
         $this->assertStringNotContainsString('base64', $brand->logo_path);
         Storage::disk('public')->assertExists($brand->logo_path);
+        $logoInfo = getimagesizefromstring(Storage::disk('public')->get($brand->logo_path));
+        $this->assertSame('image/webp', $logoInfo['mime']);
+        $this->assertLessThanOrEqual(512, max($logoInfo[0], $logoInfo[1]));
         $oldKey = $brand->logo_path;
         $this->assertStringContainsString('?v=', $brand->logoUrl());
 
@@ -129,7 +133,13 @@ class BrandContentPlanTest extends TestCase
         $this->assertStringNotContainsString('script', $plan->detail_html);
         $this->assertStringNotContainsString('onclick', $plan->detail_html);
         $this->assertDatabaseCount('content_images', 1);
-        Storage::disk('public')->assertExists($plan->images()->first()->file_path);
+        $storedImage = $plan->images()->first();
+        Storage::disk('public')->assertExists($storedImage->file_path);
+        $this->assertSame('image/webp', $storedImage->mime_type);
+        $this->assertSame(
+            Storage::disk('public')->size($storedImage->file_path),
+            $storedImage->file_size,
+        );
 
         ContentPlan::factory()->for($brand)->create([
             'posting_date' => '2026-06-10',

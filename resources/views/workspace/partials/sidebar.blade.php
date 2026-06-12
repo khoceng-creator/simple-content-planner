@@ -9,7 +9,7 @@
         </a>
         <div class="brand-main side-brand-main">
             @if ($brand->logo_path)
-                <span class="logo has-image"><img src="{{ $brand->logoUrl() }}" alt="Logo {{ $brand->name }}"></span>
+                <span class="logo has-image"><img src="{{ $brand->logoUrl() }}" alt="Logo {{ $brand->name }}" width="44" height="44" decoding="async" fetchpriority="high"></span>
             @else
                 <span class="logo">{{ $brand->initials() }}</span>
             @endif

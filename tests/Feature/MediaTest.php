@@ -31,7 +31,18 @@ class MediaTest extends TestCase
         $this->actingAs($owner)->get(route('media.show', $image))
             ->assertOk()
             ->assertHeader('Content-Type', 'image/jpeg')
-            ->assertHeader('Cache-Control', 'max-age=300, private');
+            ->assertHeader('Cache-Control', 'immutable, max-age=31536000, private')
+            ->assertHeader('Etag', '"'.sha1($image->file_path).'"');
+    }
+
+    public function test_private_media_returns_not_modified_without_a_response_body(): void
+    {
+        [$owner, $image] = $this->imageFixture();
+
+        $this->actingAs($owner)
+            ->withHeader('If-None-Match', '"'.sha1($image->file_path).'"')
+            ->get(route('media.show', $image))
+            ->assertNotModified();
     }
 
     public function test_missing_media_returns_404(): void
