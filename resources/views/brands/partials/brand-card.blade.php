@@ -1,7 +1,7 @@
 <article class="brand-card">
     <a class="brand-main" href="{{ route('brands.workspace', $brand) }}">
         @if ($brand->logo_path)
-            <span class="logo has-image"><img src="{{ $brand->logoUrl() }}" alt="Logo {{ $brand->name }}"></span>
+            <span class="logo has-image"><img src="{{ $brand->logoUrl() }}" alt="Logo {{ $brand->name }}" width="44" height="44" loading="lazy" decoding="async"></span>
         @else
             <span class="logo">{{ $brand->initials() }}</span>
         @endif

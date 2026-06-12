@@ -73,7 +73,7 @@
                 <div class="preview-files">
                     @foreach ($contentPlan->images as $image)
                         <figure class="preview-file">
-                            <img src="{{ $image->displayUrl() }}" alt="{{ $image->original_name }}">
+                            <img src="{{ $image->displayUrl() }}" alt="{{ $image->original_name }}" loading="lazy" decoding="async">
                             <figcaption>{{ $image->original_name }}</figcaption>
                             <a class="btn preview-file-download" href="{{ $image->displayUrl() }}" download="{{ $image->original_name }}">
                                 <span class="icon"><svg><use href="#i-download"/></svg></span>Download
