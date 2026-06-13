@@ -325,6 +325,75 @@ class BrandContentPlanTest extends TestCase
             ->assertDontSee('name="posting_time" type="time"', false);
     }
 
+    public function test_stat_cards_filter_timeline_and_feed_by_type_and_status(): void
+    {
+        $user = User::factory()->create();
+        $brand = Brand::factory()->for($user)->create();
+        ContentPlan::factory()->for($brand)->create([
+            'posting_date' => '2026-06-10',
+            'type' => 'carousel',
+            'headline' => 'Carousel Selesai',
+            'is_made' => true,
+        ]);
+        ContentPlan::factory()->for($brand)->create([
+            'posting_date' => '2026-06-11',
+            'type' => 'carousel',
+            'headline' => 'Carousel Belum',
+            'is_made' => false,
+        ]);
+        ContentPlan::factory()->for($brand)->create([
+            'posting_date' => '2026-06-12',
+            'type' => 'reels',
+            'headline' => 'Reels Selesai',
+            'is_made' => true,
+        ]);
+
+        $madeTimeline = $this->actingAs($user)->get(route('brands.workspace', [
+            'brand' => $brand,
+            'year' => 2026,
+            'month' => 6,
+            'status' => 'dibuat',
+        ]));
+        $madeTimeline->assertOk()
+            ->assertSee('<div class="headline">Carousel Selesai</div>', false)
+            ->assertSee('<div class="headline">Reels Selesai</div>', false)
+            ->assertDontSee('<div class="headline">Carousel Belum</div>', false)
+            ->assertSee('Status: Sudah dibuat')
+            ->assertSee('Reset filter')
+            ->assertSee('aria-label="Filter 2 konten yang sudah dibuat"', false)
+            ->assertSee(route('brands.workspace', [
+                'brand' => $brand,
+                'year' => 2026,
+                'month' => 6,
+                'type' => 'semua',
+                'status' => 'semua',
+                'view' => 'timeline',
+            ]));
+
+        $filteredFeed = $this->actingAs($user)->get(route('brands.workspace', [
+            'brand' => $brand,
+            'year' => 2026,
+            'month' => 6,
+            'type' => 'carousel',
+            'status' => 'belum',
+            'view' => 'feed',
+        ]));
+        $filteredFeed->assertOk()
+            ->assertSee('<div class="feed-title">Carousel Belum</div>', false)
+            ->assertDontSee('<div class="feed-title">Carousel Selesai</div>', false)
+            ->assertDontSee('<div class="feed-title">Reels Selesai</div>', false)
+            ->assertSee('Status: Belum dibuat')
+            ->assertSee('aria-current="page"', false)
+            ->assertSee(route('brands.workspace', [
+                'brand' => $brand,
+                'year' => 2026,
+                'month' => 6,
+                'type' => 'carousel',
+                'status' => 'belum',
+                'view' => 'timeline',
+            ]));
+    }
+
     public function test_content_modal_explains_that_the_draft_is_preserved(): void
     {
         $user = User::factory()->create();

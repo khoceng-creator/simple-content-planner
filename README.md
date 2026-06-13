@@ -23,6 +23,7 @@ IMM Content Planner adalah aplikasi internal berbasis Laravel untuk mengelola wo
 - Sidebar workspace sticky dan dapat di-scroll pada layar desktop.
 - Tampilan konten dalam mode **Timeline** dan **Feed**.
 - Filter berdasarkan tipe konten.
+- Kartu statistik dapat digunakan sebagai filter tipe dan status dengan kontrol reset.
 - Tipe konten bawaan dan tipe kustom per brand.
 - Platform Instagram dan TikTok per jadwal.
 - Input jam konsisten dalam format 24 jam pada Windows dan macOS.

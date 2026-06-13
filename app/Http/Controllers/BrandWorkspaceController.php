@@ -25,6 +25,9 @@ class BrandWorkspaceController extends Controller
         $view = in_array($request->query('view'), ['timeline', 'feed'], true)
             ? $request->query('view')
             : 'timeline';
+        $status = in_array($request->query('status'), ['semua', 'dibuat', 'belum'], true)
+            ? $request->query('status')
+            : 'semua';
 
         $monthPlans = $brand->contentPlans()
             ->forMonth($year, $month)
@@ -33,6 +36,8 @@ class BrandWorkspaceController extends Controller
 
         $plans = $monthPlans
             ->when($type !== 'semua', fn ($items) => $items->where('type', $type))
+            ->when($status === 'dibuat', fn ($items) => $items->where('is_made', true))
+            ->when($status === 'belum', fn ($items) => $items->where('is_made', false))
             ->sortBy([
                 ['posting_date', $view === 'timeline' ? 'asc' : 'desc'],
                 ['posting_time', $view === 'timeline' ? 'asc' : 'desc'],
@@ -48,6 +53,7 @@ class BrandWorkspaceController extends Controller
             'remaining' => $monthPlans->where('is_made', false)->count(),
             'types' => $contentTypes->map(fn ($contentType) => [
                 'name' => $contentType->name,
+                'slug' => $contentType->slug,
                 'count' => $monthPlans->where('type', $contentType->slug)->count(),
             ]),
         ];
@@ -86,6 +92,7 @@ class BrandWorkspaceController extends Controller
             'year',
             'month',
             'type',
+            'status',
             'view',
             'contentTypes',
             'contentTypeLabels',
