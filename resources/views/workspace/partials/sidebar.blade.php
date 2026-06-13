@@ -19,12 +19,12 @@
     <div class="month-box">
         <div class="month-row">
             <a class="btn icon-only" aria-label="Bulan sebelumnya"
-                href="{{ route('brands.workspace', ['brand' => $brand, 'year' => $previous->year, 'month' => $previous->month, 'type' => $type, 'view' => $view]) }}">
+                href="{{ route('brands.workspace', ['brand' => $brand, 'year' => $previous->year, 'month' => $previous->month, 'type' => $type, 'status' => $status, 'view' => $view]) }}">
                 <span class="icon"><svg><use href="#i-chevron-left"/></svg></span>
             </a>
             <div class="month-name">{{ $selectedMonth->locale('id')->translatedFormat('F Y') }}</div>
             <a class="btn icon-only" aria-label="Bulan berikutnya"
-                href="{{ route('brands.workspace', ['brand' => $brand, 'year' => $next->year, 'month' => $next->month, 'type' => $type, 'view' => $view]) }}">
+                href="{{ route('brands.workspace', ['brand' => $brand, 'year' => $next->year, 'month' => $next->month, 'type' => $type, 'status' => $status, 'view' => $view]) }}">
                 <span class="icon"><svg><use href="#i-chevron-right"/></svg></span>
             </a>
         </div>
