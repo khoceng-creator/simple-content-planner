@@ -55,6 +55,32 @@ class BrandContentPlanTest extends TestCase
             ->assertSee('aria-label="Tutup notifikasi"', false);
     }
 
+    public function test_brand_card_count_opens_the_nearest_scheduled_month(): void
+    {
+        CarbonImmutable::setTestNow(
+            CarbonImmutable::create(2026, 6, 20, 10, 0, 0, 'Asia/Jakarta'),
+        );
+
+        $user = User::factory()->create();
+        $brand = Brand::factory()->for($user)->create(['name' => 'Brand Juli']);
+        ContentPlan::factory()->count(2)->for($brand)->create([
+            'posting_date' => '2026-07-01',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('brands.index'))
+            ->assertOk()
+            ->assertSee('2 konten total');
+
+        $this->actingAs($user)
+            ->get(route('brands.workspace', $brand))
+            ->assertOk()
+            ->assertSee('Content Planner Juli 2026')
+            ->assertSee('01 Jul 2026');
+
+        CarbonImmutable::setTestNow();
+    }
+
     public function test_user_cannot_update_another_users_brand(): void
     {
         $owner = User::factory()->create();
@@ -443,6 +469,8 @@ class BrandContentPlanTest extends TestCase
             ->assertSee('Jadwal terdekat besok pukul 18.30.')
             ->assertSee('Jadwal terdekat besok pukul 20.00.')
             ->assertSee('Jadwal terdekat 4 hari lagi pukul 09.00.')
+            ->assertSee('11 Jun 2026')
+            ->assertSee('5 Jadwal Mendatang')
             ->assertDontSee('Besok ada konten Konten Besok.')
             ->assertSee('aria-controls="calendar-schedule-11"', false)
             ->assertSee('id="calendar-schedule-11"', false)

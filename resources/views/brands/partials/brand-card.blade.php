@@ -7,7 +7,7 @@
         @endif
         <span>
             <span class="brand-name">{{ $brand->name }}</span>
-            <span class="brand-meta">{{ $brand->content_plans_count }} konten tersimpan</span>
+            <span class="brand-meta">{{ $brand->content_plans_count }} konten total</span>
         </span>
     </a>
     <div class="brand-footer">

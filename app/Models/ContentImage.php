@@ -38,4 +38,9 @@ class ContentImage extends Model
     {
         return app(MediaStorageService::class)->displayUrl($this);
     }
+
+    public function downloadUrl(): string
+    {
+        return route('media.show', ['contentImage' => $this, 'download' => 1]);
+    }
 }

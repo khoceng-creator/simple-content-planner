@@ -45,6 +45,23 @@ class MediaTest extends TestCase
             ->assertNotModified();
     }
 
+    public function test_private_media_supports_unicode_filenames_for_inline_and_download_responses(): void
+    {
+        [$owner, $image] = $this->imageFixture();
+        $image->update(['original_name' => 'Café — Produktivitas.jpg']);
+
+        $this->actingAs($owner)
+            ->get(route('media.show', $image))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/jpeg')
+            ->assertHeader('Content-Disposition', 'inline; filename="Cafe - Produktivitas.jpg"; filename*=utf-8\'\'Caf%C3%A9%20%E2%80%94%20Produktivitas.jpg');
+
+        $this->actingAs($owner)
+            ->get($image->downloadUrl())
+            ->assertOk()
+            ->assertHeader('Content-Disposition', 'attachment; filename="Cafe - Produktivitas.jpg"; filename*=utf-8\'\'Caf%C3%A9%20%E2%80%94%20Produktivitas.jpg');
+    }
+
     public function test_missing_media_returns_404(): void
     {
         [$owner, $image] = $this->imageFixture(false);

@@ -55,11 +55,11 @@
     </div>
 
     <div class="calendar-alert">
-        <span class="calendar-alert-label">5 Jadwal Terdekat</span>
+        <span class="calendar-alert-label">5 Jadwal Mendatang</span>
         @forelse ($upcomingNotices as $notice)
             <a class="calendar-reminder-item" href="{{ route('contents.preview', $notice['plan']) }}">
                 <span>{{ $notice['message'] }}</span>
-                <small>{{ $notice['plan']->headline }}</small>
+                <small>{{ $notice['date'] }} · {{ $notice['plan']->headline }}</small>
             </a>
         @empty
             <span class="calendar-reminder-empty">Belum ada jadwal konten mendatang.</span>
