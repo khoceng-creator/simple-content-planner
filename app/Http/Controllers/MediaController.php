@@ -6,6 +6,7 @@ use App\Models\Brand;
 use App\Models\ContentImage;
 use App\Services\MediaStorageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -47,9 +48,15 @@ class MediaController extends Controller
         string $name,
         Request $request,
     ): Response {
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+        $safeName = $this->safeFilename($name);
         $response = new StreamedResponse(status: 200, headers: [
             'Content-Type' => $mimeType,
-            'Content-Disposition' => HeaderUtils::makeDisposition('inline', $name),
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                $disposition,
+                $safeName,
+                $this->asciiFilename($safeName),
+            ),
             'X-Content-Type-Options' => 'nosniff',
         ]);
         $response->setPrivate();
@@ -74,5 +81,22 @@ class MediaController extends Controller
         });
 
         return $response;
+    }
+
+    private function safeFilename(string $name): string
+    {
+        $name = preg_replace('/[\x00-\x1F\x7F]/u', '', $name) ?? '';
+        $name = trim(str_replace(['/', '\\'], '-', $name));
+
+        return $name !== '' ? $name : 'media';
+    }
+
+    private function asciiFilename(string $name): string
+    {
+        $fallback = Str::ascii($name);
+        $fallback = preg_replace('/[^\x20-\x7E]/', '', $fallback) ?? '';
+        $fallback = trim(str_replace('%', '-', $fallback));
+
+        return $fallback !== '' ? $fallback : 'media';
     }
 }

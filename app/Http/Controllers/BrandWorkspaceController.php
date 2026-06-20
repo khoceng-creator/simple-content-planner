@@ -15,8 +15,11 @@ class BrandWorkspaceController extends Controller
         $this->authorize('view', $brand);
 
         $now = CarbonImmutable::now('Asia/Jakarta');
-        $year = min(max($request->integer('year', $now->year), 2000), 2100);
-        $month = min(max($request->integer('month', $now->month), 1), 12);
+        $defaultPeriod = $request->hasAny(['year', 'month'])
+            ? $now
+            : $this->defaultPeriod($brand, $now);
+        $year = min(max($request->integer('year', $defaultPeriod->year), 2000), 2100);
+        $month = min(max($request->integer('month', $defaultPeriod->month), 1), 12);
         $contentTypes = $brand->contentTypes()->get();
         $availableTypes = $contentTypes->pluck('slug')->prepend('semua');
         $type = $availableTypes->containsStrict($request->query('type'))
@@ -80,6 +83,7 @@ class BrandWorkspaceController extends Controller
             ->map(fn (ContentPlan $plan) => [
                 'plan' => $plan,
                 'message' => $this->upcomingNotice($plan, $now),
+                'date' => $plan->posting_date->locale('id')->translatedFormat('d M Y'),
             ]);
 
         return view('workspace.show', compact(
@@ -97,6 +101,19 @@ class BrandWorkspaceController extends Controller
             'contentTypes',
             'contentTypeLabels',
         ));
+    }
+
+    private function defaultPeriod(Brand $brand, CarbonImmutable $today): CarbonImmutable
+    {
+        $postingDate = $brand->contentPlans()
+            ->whereDate('posting_date', '>=', $today->toDateString())
+            ->orderBy('posting_date')
+            ->value('posting_date')
+            ?? $brand->contentPlans()->latest('posting_date')->value('posting_date');
+
+        return $postingDate
+            ? CarbonImmutable::parse($postingDate, 'Asia/Jakarta')
+            : $today;
     }
 
     private function upcomingNotice(ContentPlan $plan, CarbonImmutable $today): string
